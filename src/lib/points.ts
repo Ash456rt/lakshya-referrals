@@ -1,11 +1,11 @@
-import { db, COMMISSION_PCT, POINTS_PER_RS } from "@/lib/db";
+import { db, commissionPct, pointsPerRs } from "@/lib/db";
 
 export function commissionFor(amountRs: number): number {
-  return Math.round((amountRs * COMMISSION_PCT) / 100);
+  return Math.round((amountRs * commissionPct()) / 100);
 }
 
 export function pointsFor(amountRs: number): number {
-  return commissionFor(amountRs) * POINTS_PER_RS;
+  return commissionFor(amountRs) * pointsPerRs();
 }
 
 /**
@@ -30,15 +30,17 @@ export function payOrderAndCredit(orderId: number): { referrerId: number; points
 
   const now = new Date().toISOString().replace("T", " ").slice(0, 19);
 
-  // Find the referral that brought this client in.
-  const referral = db
-    .prepare(
-      "SELECT id, referrer_id FROM referrals WHERE referred_email = ? AND status IN ('signed_up','ordered') ORDER BY id LIMIT 1"
-    )
-    .get(order.client_email) as { id: number; referrer_id: number } | undefined;
-
   db.prepare("UPDATE orders SET status = 'paid', paid_at = ? WHERE id = ?").run(now, orderId);
 
+  // Find the referral that brought this client in — any status, so repeat
+  // orders by the same referred client keep earning the referrer commission.
+  const referral = db
+    .prepare(
+      "SELECT id, referrer_id, status FROM referrals WHERE referred_email = ? ORDER BY id LIMIT 1"
+    )
+    .get(order.client_email) as
+    | { id: number; referrer_id: number; status: string }
+    | undefined;
   if (!referral) return null;
 
   const points = pointsFor(order.amount_rs);
@@ -48,13 +50,15 @@ export function payOrderAndCredit(orderId: number): { referrerId: number; points
     referral.referrer_id,
     orderId,
     points,
-    `Commission ${COMMISSION_PCT}% on ${order.project_name} (₹${order.amount_rs})`,
+    `Commission ${commissionPct()}% on ${order.project_name} (₹${order.amount_rs})`,
     now
   );
-  db.prepare("UPDATE referrals SET status = 'paid', order_id = ? WHERE id = ?").run(
-    orderId,
-    referral.id
-  );
+  if (referral.status === "signed_up" || referral.status === "ordered") {
+    db.prepare("UPDATE referrals SET status = 'paid', order_id = ? WHERE id = ?").run(
+      orderId,
+      referral.id
+    );
+  }
   db.prepare("UPDATE orders SET referred_by_id = ? WHERE id = ?").run(
     referral.referrer_id,
     orderId

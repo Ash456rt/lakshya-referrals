@@ -86,6 +86,15 @@ export default function AdminDashboard({
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [orderForm, setOrderForm] = useState(false);
+  const [settings, setSettings] = useState<{
+    commissionPct: number;
+    pointsPerRs: number;
+    minWithdrawPoints: number;
+    cookieDays: number;
+    adminEmails: string;
+  } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/overview");
@@ -150,6 +159,47 @@ export default function AdminDashboard({
       }
     } catch {
       setMsg({ ok: false, text: "Network error" });
+    }
+  }
+
+  async function loadSettings() {
+    const res = await fetch("/api/admin/settings");
+    if (res.ok) setSettings(await res.json());
+  }
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  async function onSaveSettings(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSavingSettings(true);
+    setMsg(null);
+    const fd = new FormData(e.currentTarget);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commissionPct: Number(fd.get("commissionPct")),
+          pointsPerRs: Number(fd.get("pointsPerRs")),
+          minWithdrawPoints: Number(fd.get("minWithdrawPoints")),
+          cookieDays: Number(fd.get("cookieDays")),
+          adminEmails: String(fd.get("adminEmails") ?? ""),
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setMsg({ ok: false, text: d.error ?? "Failed to save" });
+      } else {
+        setMsg({ ok: true, text: "Settings saved — commission changes apply to new paid orders" });
+        loadSettings();
+        load();
+      }
+    } catch {
+      setMsg({ ok: false, text: "Network error" });
+    } finally {
+      setSavingSettings(false);
     }
   }
 
@@ -616,6 +666,108 @@ export default function AdminDashboard({
               ))
             )}
           </div>
+        </section>
+
+        {/* Settings */}
+        <section className="mt-12">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-medium tracking-tight">Settings</h2>
+              <p className="mt-1 text-[13.5px] text-white/45">
+                Commission %, points conversion and payout rules. Changes to
+                commission apply to new paid orders.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setSettingsOpen(!settingsOpen);
+                if (!settings) loadSettings();
+              }}
+              className="rounded-full border border-night-line px-5 py-2.5 text-[14px] font-medium text-white/80 transition-colors hover:border-primary/50 hover:text-white"
+            >
+              {settingsOpen ? "Close" : "Edit settings"}
+            </button>
+          </div>
+
+          {settingsOpen && settings && (
+            <form
+              onSubmit={onSaveSettings}
+              className="mt-5 grid gap-4 rounded-2xl border border-night-line bg-night-soft p-6 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              <div>
+                <label className="mb-1.5 block text-[12.5px] text-white/50">
+                  Commission %
+                </label>
+                <input
+                  name="commissionPct"
+                  type="number"
+                  min={1}
+                  max={50}
+                  defaultValue={settings.commissionPct}
+                  className="w-full rounded-xl border border-night-line bg-night px-4 py-3 text-[14px] outline-none focus:border-primary/60"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[12.5px] text-white/50">
+                  Points per ₹1
+                </label>
+                <input
+                  name="pointsPerRs"
+                  type="number"
+                  min={1}
+                  max={100}
+                  defaultValue={settings.pointsPerRs}
+                  className="w-full rounded-xl border border-night-line bg-night px-4 py-3 text-[14px] outline-none focus:border-primary/60"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[12.5px] text-white/50">
+                  Min withdrawal (pts)
+                </label>
+                <input
+                  name="minWithdrawPoints"
+                  type="number"
+                  min={100}
+                  max={1000000}
+                  defaultValue={settings.minWithdrawPoints}
+                  className="w-full rounded-xl border border-night-line bg-night px-4 py-3 text-[14px] outline-none focus:border-primary/60"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[12.5px] text-white/50">
+                  Referral cookie (days)
+                </label>
+                <input
+                  name="cookieDays"
+                  type="number"
+                  min={1}
+                  max={365}
+                  defaultValue={settings.cookieDays}
+                  className="w-full rounded-xl border border-night-line bg-night px-4 py-3 text-[14px] outline-none focus:border-primary/60"
+                />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-4">
+                <label className="mb-1.5 block text-[12.5px] text-white/50">
+                  Admin emails for withdrawal alerts (comma-separated)
+                </label>
+                <input
+                  name="adminEmails"
+                  defaultValue={settings.adminEmails}
+                  placeholder="you@lakshya.in, partner@lakshya.in"
+                  className="w-full rounded-xl border border-night-line bg-night px-4 py-3 text-[14px] outline-none focus:border-primary/60"
+                />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-4">
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  className="rounded-full bg-primary px-6 py-2.5 text-[14px] font-medium transition-colors hover:bg-primary-soft disabled:opacity-50"
+                >
+                  {savingSettings ? "Saving…" : "Save settings"}
+                </button>
+              </div>
+            </form>
+          )}
         </section>
 
         {/* Referrer summary */}

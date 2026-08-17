@@ -2,23 +2,22 @@ import { db } from "@/lib/db";
 
 /* ✏️ EDIT YOUR PAYOUT EXAMPLES HERE — shown only until real paid withdrawals exist. */
 const samplePayouts = [
-  { who: "Priya M.", what: "withdrew ₹500", when: "just now" },
-  { who: "Arjun K.", what: "earned 1,600 pts", when: "4 min ago" },
-  { who: "Rahul S.", what: "got paid ₹1,200", when: "11 min ago" },
-  { who: "Sneha R.", what: "crossed 2,000 pts", when: "26 min ago" },
-  { who: "Amit V.", what: "referred a new client", when: "38 min ago" },
-  { who: "Kavya N.", what: "withdrew ₹500", when: "1 hr ago" },
-  { who: "Vikram T.", what: "earned 800 pts", when: "1 hr ago" },
-  { who: "Ishita P.", what: "got paid ₹2,400", when: "2 hrs ago" },
+  { who: "Priya", what: "withdrew ₹500", when: "just now" },
+  { who: "Arjun", what: "earned 1,600 pts", when: "4 min ago" },
+  { who: "Rahul", what: "got paid ₹1,200", when: "11 min ago" },
+  { who: "Sneha", what: "crossed 2,000 pts", when: "26 min ago" },
+  { who: "Amit", what: "referred a new client", when: "38 min ago" },
+  { who: "Kavya", what: "withdrew ₹500", when: "1 hr ago" },
+  { who: "Vikram", what: "earned 800 pts", when: "1 hr ago" },
+  { who: "Ishita", what: "got paid ₹2,400", when: "2 hrs ago" },
 ];
 
 /* 🎚️ Speed: seconds for one full loop (smaller = faster). */
 const LOOP_SECONDS = 28;
 
+// Privacy: show only the first name on the public landing page.
 function shortName(full: string) {
-  const parts = full.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0];
-  return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
+  return full.trim().split(/\s+/)[0] ?? full;
 }
 
 function timeAgo(iso: string | null): string {

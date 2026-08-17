@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, pointsBalance, MIN_WITHDRAW_POINTS } from "@/lib/db";
+import { db, pointsBalance, minWithdrawPoints } from "@/lib/db";
 import { requireUser, withAuth } from "@/lib/auth";
 import { notifyWithdrawalRequested } from "@/lib/email";
 
@@ -23,10 +23,11 @@ export const POST = withAuth(async (req: NextRequest) => {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
+  const min = minWithdrawPoints();
   const points = Number(body.points);
-  if (!Number.isFinite(points) || points < MIN_WITHDRAW_POINTS)
+  if (!Number.isFinite(points) || points < min)
     return NextResponse.json(
-      { error: `Minimum withdrawal is ${MIN_WITHDRAW_POINTS} points` },
+      { error: `Minimum withdrawal is ${min} points` },
       { status: 400 }
     );
   if (points % 100 !== 0)

@@ -115,6 +115,30 @@ export const MIN_WITHDRAW_POINTS = Number(setting("min_withdraw_points", "2000")
 export const COOKIE_DAYS = Number(setting("cookie_days", "90"));
 export const ADMIN_EMAILS = setting("admin_emails", "").split(",").filter(Boolean);
 
+/** Live-read a setting from the DB — changes take effect immediately. */
+export function getSetting(key: string, def: string): string {
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as
+    | { value: string }
+    | undefined;
+  return row?.value ?? def;
+}
+
+export function commissionPct() {
+  return Number(getSetting("commission_pct", "10"));
+}
+export function pointsPerRs() {
+  return Number(getSetting("points_per_rupee", "4"));
+}
+export function minWithdrawPoints() {
+  return Number(getSetting("min_withdraw_points", "2000"));
+}
+export function cookieDays() {
+  return Number(getSetting("cookie_days", "90"));
+}
+export function adminEmails() {
+  return getSetting("admin_emails", "").split(",").map((e) => e.trim()).filter(Boolean);
+}
+
 /** Random 6-char referral code (letters + digits, no confusable chars). */
 export function generateReferralCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

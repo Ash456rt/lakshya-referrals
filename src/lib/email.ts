@@ -1,4 +1,4 @@
-import { db, ADMIN_EMAILS } from "@/lib/db";
+import { db, adminEmails } from "@/lib/db";
 
 type Email = {
   to: string | string[];
@@ -60,9 +60,10 @@ export async function notifyWithdrawalRequested({
   ifsc: string;
   requestedAt: string;
 }) {
+  const configured = adminEmails();
   const admins =
-    ADMIN_EMAILS.length > 0
-      ? ADMIN_EMAILS
+    configured.length > 0
+      ? configured
       : db
           .prepare("SELECT email FROM users WHERE role IN ('admin','superadmin')")
           .all()

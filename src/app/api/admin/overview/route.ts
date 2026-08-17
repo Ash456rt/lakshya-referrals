@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, ADMIN_EMAILS } from "@/lib/db";
+import { db, adminEmails } from "@/lib/db";
 import { requireAdmin, withAuth } from "@/lib/auth";
 import { hoursSince } from "@/lib/format";
 
@@ -139,7 +139,7 @@ export const GET = withAuth(async () => {
     withdrawals,
     referralSummary,
     recentOrders,
-    adminEmails: ADMIN_EMAILS,
+    adminEmails: adminEmails(),
     fraud: { clusters },
   });
 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, COOKIE_DAYS } from "@/lib/db";
+import { db, cookieDays } from "@/lib/db";
 
 export async function GET(
   _req: NextRequest,
@@ -18,7 +18,7 @@ export async function GET(
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: COOKIE_DAYS * 24 * 60 * 60,
+      maxAge: cookieDays() * 24 * 60 * 60,
     });
   }
   return res;
