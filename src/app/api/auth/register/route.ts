@@ -2,27 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { db, generateReferralCode } from "@/lib/db";
 import { createSession, hashPassword } from "@/lib/auth";
-
-// Minimal in-memory signup throttle (per process).
-const attempts = new Map<string, number[]>();
-const WINDOW_MS = 60 * 60 * 1000;
-const MAX_PER_WINDOW = 10;
-
-function throttle(ip: string): boolean {
-  const now = Date.now();
-  const list = (attempts.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (list.length >= MAX_PER_WINDOW) {
-    attempts.set(ip, list);
-    return false;
-  }
-  list.push(now);
-  attempts.set(ip, list);
-  return true;
-}
+import { clientIp, rateLimited } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "local";
-  if (!throttle(ip)) {
+  const ip = clientIp(req);
+  if (rateLimited(ip, 10, 60 * 60 * 1000)) {
     return NextResponse.json(
       { error: "Too many signups from this address. Try again later." },
       { status: 429 }

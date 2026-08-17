@@ -1,13 +1,26 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import { db } from "@/lib/db";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 const SESSION_COOKIE = "lr_session";
+
+// The session secret signs login tokens. In production it MUST come from the
+// environment — never fall back to a known value (that would let anyone forge
+// an admin session by reading this repo).
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error(
+    "SESSION_SECRET is required in production. Generate one with:\n" +
+      "  node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"\n" +
+      "and set it as an environment variable."
+  );
+}
 const SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "lakshya-referrals-dev-secret-change-me"
+  process.env.SESSION_SECRET ??
+    `dev-${crypto.randomBytes(32).toString("hex")}`
 );
 const SESSION_DAYS = 30;
 

@@ -14,7 +14,8 @@ export default function ReferralTracker() {
 
   useEffect(() => {
     const code = params.get("ref")?.trim().toUpperCase();
-    if (!code) return;
+    // Only accept well-formed codes (4–8 letters/digits) to avoid junk cookies.
+    if (!code || !/^[A-Z0-9]{4,8}$/.test(code)) return;
 
     try {
       document.cookie = `lr_ref=${code}; path=/; max-age=${90 * 24 * 60 * 60}; samesite=lax`;
