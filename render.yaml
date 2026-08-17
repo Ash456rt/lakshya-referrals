@@ -1,0 +1,27 @@
+# Render Blueprint — deploy with a persistent disk so the SQLite DB survives restarts.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: lakshya-referrals
+    runtime: docker
+    plan: starter # ~$7/mo (free tier has no persistent disk)
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@lakshya.in
+      - key: ADMIN_PASSWORD
+        generateValue: true # view in Render dashboard after first deploy
+      - key: RESEND_API_KEY
+        sync: false # set manually for real emails
+      - key: EMAIL_FROM
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false # e.g. https://yourdomain.com
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1

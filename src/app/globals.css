@@ -1,26 +1,167 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Brand — Stripe-inspired fintech palette */
+  --color-primary: #533afd;
+  --color-primary-deep: #4434d4;
+  --color-primary-press: #2e2b8c;
+  --color-primary-soft: #665efd;
+  --color-primary-tint: #efedfe;
+
+  /* Ink scale — theme-aware */
+  --color-ink: var(--c-ink);
+  --color-ink-secondary: var(--c-ink-secondary);
+  --color-ink-mute: var(--c-ink-mute);
+
+  /* Surfaces — theme-aware */
+  --color-canvas: var(--c-canvas);
+  --color-canvas-soft: var(--c-canvas-soft);
+  --color-hairline: var(--c-hairline);
+
+  /* Accents */
+  --color-ruby: #ea2261;
+  --color-magenta: #f96bee;
+  --color-mint: #10b981;
+
+  /* Dark shell (used by the dashboard preview / admin — stays dark in both themes) */
+  --color-night: #0b1020;
+  --color-night-soft: #111a33;
+  --color-night-line: #1e2a4a;
+
+  /* Type */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ---------- Theme tokens ---------- */
+:root {
+  --c-ink: #0d253d;
+  --c-ink-secondary: #273951;
+  --c-ink-mute: #64748d;
+  --c-canvas: #ffffff;
+  --c-canvas-soft: #f6f9fc;
+  --c-hairline: #e3e8ee;
+  color-scheme: light;
+}
+
+.dark {
+  --c-ink: #e7edf6;
+  --c-ink-secondary: #b8c6d8;
+  --c-ink-mute: #8b9bb4;
+  --c-canvas: #0b1020;
+  --c-canvas-soft: #111a33;
+  --c-hairline: #1e2a4a;
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--c-canvas);
+  color: var(--c-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ---------- Utilities ---------- */
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle grid backdrop, Stripe-style */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(83, 58, 253, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(83, 58, 253, 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* Film-grain noise overlay — kills the flat "AI" look */
+.noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Soft radial glow behind hero content */
+.hero-glow {
+  background:
+    radial-gradient(52% 44% at 50% 0%, rgba(83, 58, 253, 0.14) 0%, rgba(249, 107, 238, 0.06) 45%, transparent 70%),
+    radial-gradient(30% 26% at 82% 18%, rgba(102, 94, 253, 0.1) 0%, transparent 60%);
+}
+
+/* Hairline card */
+.card-line {
+  border: 1px solid var(--color-hairline);
+}
+
+/* Thin display type, tight tracking (Stripe weight-300 editorial) */
+.display {
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+::selection {
+  background: rgba(83, 58, 253, 0.16);
+}
+
+/* Range slider styling for the calculator */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-primary) 0%,
+    var(--color-primary) var(--fill, 50%),
+    var(--color-hairline) var(--fill, 50%),
+    var(--color-hairline) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 2px 8px rgba(83, 58, 253, 0.35);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 2px 8px rgba(83, 58, 253, 0.35);
+}
+
+/* Infinite marquee for the payouts ticker */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
