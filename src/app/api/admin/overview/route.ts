@@ -35,6 +35,26 @@ export const GET = withAuth(async () => {
     ).s,
   };
 
+  // Fraud flags: duplicate bank details across users / multiple accounts per user.
+  const flaggedRows = db
+    .prepare(
+      `SELECT w.id,
+         (SELECT COUNT(*) FROM withdrawals w2
+           WHERE w2.account_no = w.account_no AND w2.ifsc = w.ifsc
+             AND w2.user_id != w.user_id AND w2.status IN ('requested','approved','paid')) AS dup_account,
+         (SELECT COUNT(DISTINCT w3.account_no) FROM withdrawals w3
+           WHERE w3.user_id = w.user_id AND w3.account_no != w.account_no) AS dup_user_account
+       FROM withdrawals w`
+    )
+    .all() as { id: number; dup_account: number; dup_user_account: number }[];
+  const flaggedWithdrawals = new Map<number, { dupAccount: boolean; dupUserAccount: boolean }>();
+  for (const f of flaggedRows) {
+    flaggedWithdrawals.set(f.id, {
+      dupAccount: f.dup_account > 0,
+      dupUserAccount: f.dup_user_account > 0,
+    });
+  }
+
   const withdrawals = db
     .prepare(
       `SELECT w.*, u.name AS user_name, u.email AS user_email
@@ -77,8 +97,22 @@ export const GET = withAuth(async () => {
         requestedAt: row.requested_at,
         paidAt: row.paid_at,
         slaHours: hoursSince(row.requested_at),
+        ...(flaggedWithdrawals.get(row.id) ?? { dupAccount: false, dupUserAccount: false }),
       };
     });
+
+  // IP clusters: 3+ referred users signing up from the same IP is suspicious.
+  const clusters = db
+    .prepare(
+      `SELECT u.signup_ip AS ip, COUNT(*) AS count, GROUP_CONCAT(r.referred_email, ', ') AS emails
+       FROM referrals r
+       JOIN users u ON u.email = r.referred_email
+       WHERE u.signup_ip IS NOT NULL
+       GROUP BY u.signup_ip
+       HAVING count >= 3
+       ORDER BY count DESC`
+    )
+    .all() as { ip: string; count: number; emails: string }[];
 
   // Per-referrer summary (how many people each referrer brought in).
   const referralSummary = db
@@ -106,5 +140,6 @@ export const GET = withAuth(async () => {
     referralSummary,
     recentOrders,
     adminEmails: ADMIN_EMAILS,
+    fraud: { clusters },
   });
 });

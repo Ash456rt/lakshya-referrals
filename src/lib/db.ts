@@ -90,6 +90,14 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `);
 
+// Migration: add signup_ip to users (fraud detection) if missing.
+const userCols = (db.prepare("PRAGMA table_info(users)").all() as { name: string }[]).map(
+  (c) => c.name
+);
+if (!userCols.includes("signup_ip")) {
+  db.exec("ALTER TABLE users ADD COLUMN signup_ip TEXT");
+}
+
 /* ---------------- Defaults & seed ---------------- */
 
 function setting(key: string, def: string) {

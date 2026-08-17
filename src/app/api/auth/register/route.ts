@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
   const email = body.email?.trim().toLowerCase();
   const phone = body.phone?.trim() || null;
   const password = body.password ?? "";
+  const signupIp = ip === "local" ? null : ip;
 
   if (!name || name.length < 2)
     return NextResponse.json({ error: "Enter your name" }, { status: 400 });
@@ -59,21 +60,39 @@ export async function POST(req: NextRequest) {
   const code = generateReferralCode();
   const info = db
     .prepare(
-      "INSERT INTO users (name, email, phone, password_hash, role, referral_code) VALUES (?, ?, ?, ?, 'user', ?)"
+      "INSERT INTO users (name, email, phone, password_hash, role, referral_code, signup_ip) VALUES (?, ?, ?, ?, 'user', ?, ?)"
     )
-    .run(name, email, phone, hashPassword(password), code);
+    .run(name, email, phone, hashPassword(password), code, signupIp);
   const userId = Number(info.lastInsertRowid);
 
   // Referral attribution: did they arrive via a referral link (90-day cookie)?
   const refCode = (await cookies()).get("lr_ref")?.value;
   if (refCode) {
     const referrer = db
-      .prepare("SELECT id FROM users WHERE referral_code = ?")
-      .get(refCode.toUpperCase()) as { id: number } | undefined;
-    if (referrer && referrer.id !== userId) {
-      db.prepare(
-        "INSERT INTO referrals (referrer_id, referred_name, referred_email, status, ref_code) VALUES (?, ?, ?, 'signed_up', ?)"
-      ).run(referrer.id, name, email, refCode.toUpperCase());
+      .prepare("SELECT id, signup_ip FROM users WHERE referral_code = ?")
+      .get(refCode.toUpperCase()) as { id: number; signup_ip: string | null } | undefined;
+    // Same device/IP signing up a second account to self-refer — block only when both IPs are known.
+    const selfBlocked =
+      !!referrer &&
+      referrer.id !== userId &&
+      !!referrer.signup_ip &&
+      !!signupIp &&
+      referrer.signup_ip === signupIp;
+    if (referrer && referrer.id !== userId && !selfBlocked) {
+      // One referral per person — don't re-attribute an email that's already claimed.
+      const already = db
+        .prepare(
+          "SELECT 1 FROM referrals WHERE referred_email = ? AND referrer_id = ?"
+        )
+        .get(email, referrer.id);
+      const claimedByOther = db
+        .prepare("SELECT 1 FROM referrals WHERE referred_email = ? AND referrer_id != ?")
+        .get(email, referrer.id);
+      if (!already && !claimedByOther) {
+        db.prepare(
+          "INSERT INTO referrals (referrer_id, referred_name, referred_email, status, ref_code) VALUES (?, ?, ?, 'signed_up', ?)"
+        ).run(referrer.id, name, email, refCode.toUpperCase());
+      }
     }
   }
 

@@ -30,6 +30,8 @@ type Overview = {
     requestedAt: string;
     paidAt: string | null;
     slaHours: number;
+    dupAccount?: boolean;
+    dupUserAccount?: boolean;
   }[];
   referralSummary: {
     id: number;
@@ -49,6 +51,9 @@ type Overview = {
     created_at: string;
   }[];
   adminEmails: string[];
+  fraud: {
+    clusters: { ip: string; count: number; emails: string }[];
+  };
 };
 
 const W_STATUS: Record<string, { label: string; cls: string }> = {
@@ -261,6 +266,33 @@ export default function AdminDashboard({
           ))}
         </div>
 
+        {/* Fraud flags */}
+        {data.fraud?.clusters?.length > 0 && (
+          <section className="mt-10 rounded-2xl border border-ruby/40 bg-ruby/5 p-6">
+            <h2 className="flex items-center gap-2 text-lg font-medium tracking-tight text-white">
+              ⚠ Fraud flags
+            </h2>
+            <p className="mt-1 text-[13.5px] text-white/50">
+              {data.fraud.clusters.length} IP cluster(s) — 3+ referred users
+              signed up from the same address. Review before paying out.
+            </p>
+            <div className="mt-4 space-y-2">
+              {data.fraud.clusters.map((c) => (
+                <div
+                  key={c.ip}
+                  className="flex flex-wrap items-center gap-3 rounded-xl bg-night px-4 py-3 font-mono text-[12.5px]"
+                >
+                  <span className="text-ruby">{c.ip}</span>
+                  <span className="text-white/50">· {c.count} signups</span>
+                  <span className="min-w-0 flex-1 truncate text-white/40">
+                    {c.emails}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Payout queue */}
         <section className="mt-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -325,6 +357,11 @@ export default function AdminDashboard({
                       >
                         {W_STATUS[w.status]?.label ?? w.status}
                       </span>
+                      {(w.dupAccount || w.dupUserAccount) && (
+                        <span className="rounded-full bg-ruby/15 px-3 py-1 text-[12px] font-medium text-ruby">
+                          ⚠ {w.dupAccount ? "dup bank" : "multi-account"}
+                        </span>
+                      )}
                       <span
                         className={`rounded-full px-3 py-1 font-mono text-[11.5px] ${
                           sla.overdue && active
