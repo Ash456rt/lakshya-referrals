@@ -50,3 +50,4 @@ data/
 
 # browser check artifacts
 screenshots/
+!.env.example
